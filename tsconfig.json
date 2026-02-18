@@ -29,9 +29,11 @@
     // Path aliases
     "paths": {
       "@controllers": ["./src/controllers"],
-      "@models": ["./src/models"],
       "@routes": ["./src/routes"],
-      "@services": ["./src/services"]
+      "@services": ["./src/services"],
+      "@lib": ["./src/lib"],
+      "@middlewares": ["./src/middlewares"],
+      "@config": ["./src/config"]
     }
   }
 }
