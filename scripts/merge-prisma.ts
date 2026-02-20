@@ -1,7 +1,8 @@
 import fs from 'fs';
 import path from 'path';
 
-const prismaDir = path.resolve(__dirname, '../prisma');
+const __dirname = path.resolve();
+const prismaDir = path.resolve(__dirname, './prisma');
 const modelsDir = path.join(prismaDir, 'models');
 const schemaPath = path.join(prismaDir, 'schema.prisma');
 
@@ -17,7 +18,7 @@ for (const file of modelFiles) {
   const filePath = path.join(modelsDir, file);
   const content = fs.readFileSync(filePath, 'utf-8');
 
-  modelsContent += `\n\n// ===== ${file} =====\n\n`;
+  modelsContent += `\n\n// ===== ${file.split('.')[0]?.toUpperCase()} =====\n\n`;
   modelsContent += content;
 }
 

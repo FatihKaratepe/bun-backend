@@ -1,3 +1,9 @@
+# TODO LIST
+- Trendyol, Hepsiburada, Amazon ve ETSY Entegrasyonu
+- Sanal POS entegrasyonu 
+
+
+
 [🇬🇧 English](#bun--express-rest-api) | [🇹🇷 Türkçe](#bun--express-rest-api-1)
 
 # Bun + Express REST API

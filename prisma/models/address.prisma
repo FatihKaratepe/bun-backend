@@ -1,0 +1,20 @@
+model Address {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  title       String  
+  fullName    String
+  phone       String
+
+  country     String
+  city        String
+  district    String
+  postalCode  String
+  addressLine String
+
+  isInvoice   Boolean  @default(false)
+  isShipping  Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+}

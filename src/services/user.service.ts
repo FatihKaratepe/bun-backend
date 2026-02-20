@@ -1,9 +1,11 @@
 import { prisma } from '@lib';
 import { AppError } from '@middlewares';
+import { createUserValidatorSchema } from '@schemas';
 import type { Request } from 'express';
+import z from 'zod';
 
 export const UserService = {
-  findAll: async (req: Request) => {
+  getAll: async (req: Request) => {
     const { page = '1', limit = '10', sort = 'createdAt' } = req.query;
 
     return await prisma.user.findMany({
@@ -11,7 +13,7 @@ export const UserService = {
       take: Number(limit),
     });
   },
-  findById: async (req: Request) => {
+  getById: async (req: Request) => {
     const id = Number(req.params.id);
     if (!id || isNaN(id)) {
       throw new AppError('Invalid or missing user id', 400);
@@ -25,6 +27,10 @@ export const UserService = {
   },
   create: async (req: Request) => {
     const data = req.body;
+    const valid = createUserValidatorSchema.safeParse(data);
+    if(!valid.success) {
+      return new AppError(`Validation Error: ${z.treeifyError(valid.error)}`, 400);
+    }
     return await prisma.user.create({ data });
   },
   update: async (req: Request) => {

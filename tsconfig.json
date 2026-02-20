@@ -33,7 +33,9 @@
       "@services": ["./src/services"],
       "@lib": ["./src/lib"],
       "@middlewares": ["./src/middlewares"],
-      "@config": ["./src/config"]
+      "@config": ["./src/config"],
+      "@schemas": ["./src/schemas"],
+      "@auth": ["./src/modules/auth"]
     }
   }
 }
