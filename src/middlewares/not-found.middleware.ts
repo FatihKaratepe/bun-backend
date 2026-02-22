@@ -2,5 +2,5 @@ import type { Request, Response } from 'express';
 import { AppError } from './error.middleware';
 
 export const notFoundMiddleware = (req: Request, res: Response) => {
-  new AppError(`Route not found: ${req.originalUrl}`, 404);
+  throw new AppError(`Route not found: ${req.originalUrl}`, 404);
 };

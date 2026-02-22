@@ -7,6 +7,7 @@ import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from '@config';
 import { errorMiddleware, notFoundMiddleware } from '@middlewares';
 import { UserRoutes } from '@routes';
+import AuthRoutes from './routes/auth.routes';
 
 const app = express();
 const PORT = 3000;
@@ -25,6 +26,7 @@ app.use(
 app.use(express.json());
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
+app.use('/auth', AuthRoutes);
 app.use('/users', UserRoutes);
 
 app.get('/', (req, res) => {

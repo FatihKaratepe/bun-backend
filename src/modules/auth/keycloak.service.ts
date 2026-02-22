@@ -5,7 +5,7 @@ const KEYCLOAK_REALM = process.env.KEYCLOAK_REALM;
 
 export async function getAdminToken() {
   const response = await axios.post(
-    `${KEYCLOAK_BASE}/realms/master/protocol/openid-connect/token`,
+    `${KEYCLOAK_BASE}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token`,
     new URLSearchParams({
       grant_type: 'client_credentials',
       client_id: process.env.KEYCLOAK_CLIENT_ID!,
@@ -24,6 +24,8 @@ export async function createKeycloakUser(
   data: {
     email: string;
     password: string;
+    firstName?: string;
+    lastName?: string;
   },
 ) {
   const response = await axios.post(
@@ -31,7 +33,11 @@ export async function createKeycloakUser(
     {
       username: data.email,
       email: data.email,
+      firstName: data.firstName || '',
+      lastName: data.lastName || '',
       enabled: true,
+      emailVerified: true,
+      requiredActions: [],
       credentials: [
         {
           type: 'password',
@@ -53,9 +59,22 @@ export async function createKeycloakUser(
     throw new Error('Keycloak user creation failed');
   }
 
-  // Location header’dan userId çekiyoruz
   const location = response.headers.location;
   const userId = location.split('/').pop();
+
+  await axios.put(
+    `${KEYCLOAK_BASE}/admin/realms/${KEYCLOAK_REALM}/users/${userId}`,
+    {
+      emailVerified: true,
+      requiredActions: [],
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${adminToken}`,
+        'Content-Type': 'application/json',
+      },
+    },
+  );
 
   return userId;
 }

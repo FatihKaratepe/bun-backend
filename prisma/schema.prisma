@@ -12,3 +12,61 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+
+// ===== ADDRESS =====
+
+
+
+// ===== USER =====
+
+
+// ===== ADDRESS =====
+
+model Address {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  title       String  
+  fullName    String
+  phone       String
+
+  country     String
+  city        String
+  district    String
+  postalCode  String
+  addressLine String
+
+  isInvoice   Boolean  @default(false)
+  isShipping  Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+}
+
+// ===== USER =====
+
+model User {
+  id            String   @id @default(uuid())
+  keycloakId    String   @unique
+  email         String
+  firstName     String
+  lastName      String
+  phone         String
+
+  userType      UserType @default(INDIVIDUAL)
+
+  companyName   String?
+  taxNumber     String?
+  taxOffice     String?
+
+  addresses     Address[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+enum UserType {
+  INDIVIDUAL
+  CORPORATE
+}

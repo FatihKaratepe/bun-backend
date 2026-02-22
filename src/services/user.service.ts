@@ -1,8 +1,7 @@
 import { prisma } from '@lib';
 import { AppError } from '@middlewares';
-import { createUserValidatorSchema } from '@schemas';
+import { updateUserValidatorSchema } from '@schemas';
 import type { Request } from 'express';
-import z from 'zod';
 
 export const UserService = {
   getAll: async (req: Request) => {
@@ -13,30 +12,25 @@ export const UserService = {
       take: Number(limit),
     });
   },
+
   getById: async (req: Request) => {
-    const id = Number(req.params.id);
-    if (!id || isNaN(id)) {
-      throw new AppError('Invalid or missing user id', 400);
+    const id = req.params.id;
+    if (!id) {
+      throw new AppError('User ID is required', 400);
     }
 
     const existingUser = await prisma.user.findUnique({ where: { id } });
     if (!existingUser) {
       throw new AppError('User not found', 404);
     }
-    return await prisma.user.findUnique({ where: { id: id } });
+
+    return existingUser;
   },
-  create: async (req: Request) => {
-    const data = req.body;
-    const valid = createUserValidatorSchema.safeParse(data);
-    if(!valid.success) {
-      return new AppError(`Validation Error: ${z.treeifyError(valid.error)}`, 400);
-    }
-    return await prisma.user.create({ data });
-  },
+
   update: async (req: Request) => {
-    const id = Number(req.params.id);
-    if (!id || isNaN(id)) {
-      throw new AppError('Invalid or missing user id', 400);
+    const id = req.params.id;
+    if (!id) {
+      throw new AppError('User ID is required', 400);
     }
 
     const existingUser = await prisma.user.findUnique({ where: { id } });
@@ -44,7 +38,15 @@ export const UserService = {
       throw new AppError('User not found', 404);
     }
 
-    const data = req.body;
-    return await prisma.user.update({ where: { id }, data });
+    const result = updateUserValidatorSchema.safeParse(req.body);
+
+    if (!result.success) {
+      const messages = result.error.issues
+        .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+        .join(', ');
+      throw new AppError(`Validation failed — ${messages}`, 400);
+    }
+
+    return await prisma.user.update({ where: { id }, data: result.data });
   },
 };

@@ -7,12 +7,12 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return new AppError('Unauthorized', 401);
+      throw new AppError('Unauthorized — No token provided', 401);
     }
 
     const token = authHeader.replace('Bearer ', '');
     if (!token) {
-      return res.status(401).json({ message: 'Unauthorized' });
+      throw new AppError('Unauthorized — Empty token', 401);
     }
 
     const payload = await verifyToken(token);
@@ -20,6 +20,9 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     req.user = payload;
     next();
   } catch (err) {
-    return new AppError('Invalid token', 401);
+    if (err instanceof AppError) {
+      throw err;
+    }
+    throw new AppError('Unauthorized — Invalid or expired token', 401);
   }
 }

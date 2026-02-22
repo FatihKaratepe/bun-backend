@@ -20,5 +20,9 @@ export const errorMiddleware = (err: any, _: Request, res: Response, __: NextFun
 
   return res.status(500).json({
     message: 'Internal Server Error',
+    ...(process.env.NODE_ENV !== 'production' && {
+      error: err.message || 'Unknown error',
+      stack: err.stack,
+    }),
   });
 };

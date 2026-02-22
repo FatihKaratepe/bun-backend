@@ -1,21 +1,52 @@
 import { prisma } from '@lib';
+import { AppError } from '@middlewares';
+import { createUserValidatorSchema } from '@schemas';
 import axios from 'axios';
 import { createKeycloakUser, deleteKeycloakUser, getAdminToken } from './keycloak.service';
 
 const KEYCLOAK_BASE = process.env.KEYCLOAK_BASE;
 const KEYCLOAK_REALM = process.env.KEYCLOAK_REALM;
 
-export async function register(dto: { email: string; password: string; userType: 'INDIVIDUAL' | 'CORPORATE' }) {
-  const adminToken = await getAdminToken();
+export async function register(dto: {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  userType: 'INDIVIDUAL' | 'CORPORATE';
+  companyName?: string;
+  taxNumber?: string;
+  taxOffice?: string;
+}) {
+  const { password, ...userData } = dto;
 
+  const result = createUserValidatorSchema.safeParse({
+    ...userData,
+    keycloakId: 'temp',
+  });
+
+  if (!result.success) {
+    const messages = result.error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join(', ');
+    throw new AppError(`Validation failed — ${messages}`, 400);
+  }
+
+  const adminToken = await getAdminToken();
   const keycloakUserId = await createKeycloakUser(adminToken, dto);
 
   try {
     const user = await prisma.user.create({
       data: {
         keycloakId: keycloakUserId!,
-        email: dto.email,
-        userType: dto.userType,
+        email: userData.email,
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        phone: userData.phone,
+        userType: userData.userType,
+        companyName: userData.companyName,
+        taxNumber: userData.taxNumber,
+        taxOffice: userData.taxOffice,
       },
     });
 
@@ -50,7 +81,8 @@ export async function login(dto: { email: string; password: string }) {
       expiresIn: response.data.expires_in,
     };
   } catch (error: any) {
-    throw new Error('Invalid credentials');
+    const detail = error.response?.data?.error_description || error.message;
+    throw new AppError(`Invalid credentials — ${detail}`, 401);
   }
 }
 

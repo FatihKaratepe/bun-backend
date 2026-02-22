@@ -1,10 +1,24 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
 
-const JWKS = createRemoteJWKSet(new URL('http://localhost:8080/realms/my-app/protocol/openid-connect/certs'));
+let jwks: ReturnType<typeof createRemoteJWKSet>;
+
+function getJWKS() {
+  if (!jwks) {
+    const KEYCLOAK_BASE = process.env.KEYCLOAK_BASE;
+    const KEYCLOAK_REALM = process.env.KEYCLOAK_REALM;
+    jwks = createRemoteJWKSet(
+      new URL(`${KEYCLOAK_BASE}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs`),
+    );
+  }
+  return jwks;
+}
 
 export async function verifyToken(token: string) {
-  const { payload } = await jwtVerify(token, JWKS, {
-    issuer: 'http://localhost:8080/realms/my-app',
+  const KEYCLOAK_BASE = process.env.KEYCLOAK_BASE;
+  const KEYCLOAK_REALM = process.env.KEYCLOAK_REALM;
+
+  const { payload } = await jwtVerify(token, getJWKS(), {
+    issuer: `${KEYCLOAK_BASE}/realms/${KEYCLOAK_REALM}`,
   });
 
   return payload;
