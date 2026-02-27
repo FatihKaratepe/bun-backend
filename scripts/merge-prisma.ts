@@ -1,5 +1,8 @@
 import fs from 'fs';
 import path from 'path';
+import { logFactory } from '../src/utils/logger';
+
+const logger = logFactory({});
 
 const __dirname = path.resolve();
 const prismaDir = path.resolve(__dirname, './prisma');
@@ -26,4 +29,4 @@ const finalSchema = `${header.trim()}\n${modelsContent}`;
 
 fs.writeFileSync(schemaPath, finalSchema);
 
-console.log('✅ Prisma schema merged successfully.');
+logger.success('✅ Prisma schema merged successfully.');

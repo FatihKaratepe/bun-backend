@@ -13,14 +13,6 @@ datasource db {
   provider = "postgresql"
 }
 
-
-// ===== ADDRESS =====
-
-
-
-// ===== USER =====
-
-
 // ===== ADDRESS =====
 
 model Address {

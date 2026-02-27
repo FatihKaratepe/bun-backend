@@ -1,4 +1,5 @@
 import swaggerJsdoc, { type Options } from 'swagger-jsdoc';
+import type { SwaggerUiOptions } from 'swagger-ui-express';
 
 const options: Options = {
   definition: {
@@ -14,7 +15,13 @@ const options: Options = {
       },
     ],
   },
-  apis: ['./src/routes/**/*.ts'], // Route dosyalarını tarar
+  apis: ['./src/routes/**/*.ts'],
+};
+
+export const customSwaggerOptions: SwaggerUiOptions = {
+  swaggerOptions: {
+    urls: [{ url: '../swagger.json', name: 'Swagger JSON' }],
+  },
 };
 
 export const swaggerSpec = swaggerJsdoc(options);
