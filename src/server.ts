@@ -6,12 +6,10 @@ import swaggerUi from 'swagger-ui-express';
 
 import { customSwaggerOptions, swaggerSpec } from '@config';
 import { errorMiddleware, notFoundMiddleware } from '@middlewares';
-import { UserRoutes } from '@routes';
-import AuthRoutes from './routes/auth.routes';
-import { logFactory } from './utils/logger';
+import { UserRoutes,AuthRoutes } from '@routes';
+import { logFactory } from '@utils';
 
 const app = express();
-const PORT = 3000;
 const logger = logFactory({})
 
 app.use(helmet());
@@ -27,6 +25,7 @@ app.use(
 );
 
 app.use(express.json());
+app.get('/favicon.ico', (req, res) => res.status(204).end());
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, customSwaggerOptions));
 app.get('/swagger.json', (req, res) => res.json(swaggerSpec));
 
@@ -40,6 +39,6 @@ app.get('/', (req, res) => {
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);
 
-app.listen(PORT, () => {
-  logger.info(`Server is running on http://localhost:${PORT}`);
+app.listen(process.env.PORT, () => {
+  logger.info(`Server is running on http://localhost:${process.env.PORT}`);
 });

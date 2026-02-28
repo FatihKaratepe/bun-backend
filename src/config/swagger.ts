@@ -5,9 +5,9 @@ const options: Options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'My API',
+      title: process.env.SWAGGER_NAME || 'My API',
       version: '1.0.0',
-      description: 'Express API Documentation',
+      description: process.env.SWAGGER_DESCRIPTION || 'Express API Documentation',
     },
     servers: [
       {
