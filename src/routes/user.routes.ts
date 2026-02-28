@@ -1,6 +1,6 @@
-import { UserController } from '@controllers';
 import { asyncHandler, authMiddleware } from '@middlewares';
 import { Router } from 'express';
+import { UserController } from '../modules/user/user.controller';
 
 const router = Router();
 

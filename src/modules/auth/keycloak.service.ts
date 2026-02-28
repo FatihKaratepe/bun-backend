@@ -1,3 +1,4 @@
+import { AppError } from '@middlewares';
 import axios from 'axios';
 
 const KEYCLOAK_BASE = process.env.KEYCLOAK_BASE;
@@ -56,25 +57,11 @@ export async function createKeycloakUser(
   );
 
   if (response.status !== 201) {
-    throw new Error('Keycloak user creation failed');
+    throw new AppError('Keycloak user creation failed', 400);
   }
 
   const location = response.headers.location;
   const userId = location.split('/').pop();
-
-  await axios.put(
-    `${KEYCLOAK_BASE}/admin/realms/${KEYCLOAK_REALM}/users/${userId}`,
-    {
-      emailVerified: true,
-      requiredActions: [],
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${adminToken}`,
-        'Content-Type': 'application/json',
-      },
-    },
-  );
 
   return userId;
 }

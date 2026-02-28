@@ -143,4 +143,4 @@ router.post('/register', asyncHandler(AuthController.register));
  */
 router.post('/login', asyncHandler(AuthController.login));
 
-export default router;
+export const AuthRoutes = router;

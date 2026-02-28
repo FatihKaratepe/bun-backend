@@ -1,5 +1,5 @@
+import { verifyToken } from '@utils';
 import type { NextFunction, Request, Response } from 'express';
-import { verifyToken } from '../utils/auth';
 import { AppError } from './error.middleware';
 
 export async function authMiddleware(req: Request, res: Response, next: NextFunction) {

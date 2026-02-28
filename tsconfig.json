@@ -28,14 +28,12 @@
 
     // Path aliases
     "paths": {
-      "@controllers": ["./src/controllers"],
       "@routes": ["./src/routes"],
-      "@services": ["./src/services"],
       "@lib": ["./src/lib"],
       "@middlewares": ["./src/middlewares"],
       "@config": ["./src/config"],
+      "@utils": ["./src/utils"],
       "@schemas": ["./src/schemas"],
-      "@auth": ["./src/modules/auth"]
     }
   }
 }

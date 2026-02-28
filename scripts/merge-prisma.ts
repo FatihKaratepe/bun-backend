@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { logFactory } from '../src/utils/logger';
+import { logFactory } from '@utils';
 
 const logger = logFactory({});
 
