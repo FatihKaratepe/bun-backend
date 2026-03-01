@@ -1,12 +1,9 @@
 import { AppError } from '@middlewares';
 import axios from 'axios';
 
-const KEYCLOAK_BASE = process.env.KEYCLOAK_BASE;
-const KEYCLOAK_REALM = process.env.KEYCLOAK_REALM;
-
 export async function getAdminToken() {
   const response = await axios.post(
-    `${KEYCLOAK_BASE}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token`,
+    `${process.env.KEYCLOAK_BASE}/realms/${process.env.KEYCLOAK_REALM}/protocol/openid-connect/token`,
     new URLSearchParams({
       grant_type: 'client_credentials',
       client_id: process.env.KEYCLOAK_CLIENT_ID!,
@@ -30,7 +27,7 @@ export async function createKeycloakUser(
   },
 ) {
   const response = await axios.post(
-    `${KEYCLOAK_BASE}/admin/realms/${KEYCLOAK_REALM}/users`,
+    `${process.env.KEYCLOAK_BASE}/admin/realms/${process.env.KEYCLOAK_REALM}/users`,
     {
       username: data.email,
       email: data.email,
@@ -67,7 +64,7 @@ export async function createKeycloakUser(
 }
 
 export async function deleteKeycloakUser(adminToken: string, userId: string) {
-  await axios.delete(`${KEYCLOAK_BASE}/admin/realms/${KEYCLOAK_REALM}/users/${userId}`, {
+  await axios.delete(`${process.env.KEYCLOAK_BASE}/admin/realms/${process.env.KEYCLOAK_REALM}/users/${userId}`, {
     headers: {
       Authorization: `Bearer ${adminToken}`,
     },

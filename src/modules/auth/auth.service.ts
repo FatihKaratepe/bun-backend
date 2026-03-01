@@ -4,9 +4,6 @@ import { createUserValidatorSchema } from '@schemas';
 import axios from 'axios';
 import { createKeycloakUser, deleteKeycloakUser, getAdminToken } from './keycloak.service';
 
-const KEYCLOAK_BASE = process.env.KEYCLOAK_BASE;
-const KEYCLOAK_REALM = process.env.KEYCLOAK_REALM;
-
 export async function register(dto: {
   email: string;
   password: string;
@@ -60,7 +57,7 @@ export async function register(dto: {
 export async function login(dto: { email: string; password: string }) {
   try {
     const response = await axios.post(
-      `${KEYCLOAK_BASE}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/token`,
+      `${process.env.KEYCLOAK_BASE}/realms/${process.env.KEYCLOAK_REALM}/protocol/openid-connect/token`,
       new URLSearchParams({
         grant_type: 'password',
         client_id: process.env.KEYCLOAK_CLIENT_ID!,
@@ -89,7 +86,7 @@ export async function login(dto: { email: string; password: string }) {
 export async function logout(refreshToken: string) {
   try {
     await axios.post(
-      `${KEYCLOAK_BASE}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/logout`,
+      `${process.env.KEYCLOAK_BASE}/realms/${process.env.KEYCLOAK_REALM}/protocol/openid-connect/logout`,
       new URLSearchParams({
         client_id: process.env.KEYCLOAK_CLIENT_ID!,
         client_secret: process.env.KEYCLOAK_CLIENT_SECRET!,
