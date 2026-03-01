@@ -6,6 +6,9 @@ model User {
   lastName      String
   phone         String
 
+  isEmailVerified Boolean @default(false)
+  activationToken String? @unique
+
   userType      UserType @default(INDIVIDUAL)
 
   companyName   String?

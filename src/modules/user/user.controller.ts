@@ -12,4 +12,9 @@ export const UserController = {
     res.json(user);
   },
 
+  updateUser: async (req: Request, res: Response) => {
+    const user = await UserService.update(req);
+    res.json(user);
+  },
+
 };

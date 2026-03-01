@@ -33,8 +33,8 @@ export async function createKeycloakUser(
       email: data.email,
       firstName: data.firstName || '',
       lastName: data.lastName || '',
-      enabled: true,
-      emailVerified: true,
+      enabled: false,
+      emailVerified: false,
       requiredActions: [],
       credentials: [
         {
@@ -69,4 +69,65 @@ export async function deleteKeycloakUser(adminToken: string, userId: string) {
       Authorization: `Bearer ${adminToken}`,
     },
   });
+}
+
+export async function updateKeycloakUser(
+  adminToken: string,
+  userId: string,
+  data: {
+    firstName?: string;
+    lastName?: string;
+  },
+) {
+  const payload: any = {};
+  if (data.firstName !== undefined) payload.firstName = data.firstName;
+  if (data.lastName !== undefined) payload.lastName = data.lastName;
+
+  await axios.put(
+    `${process.env.KEYCLOAK_BASE}/admin/realms/${process.env.KEYCLOAK_REALM}/users/${userId}`,
+    payload,
+    {
+      headers: {
+        Authorization: `Bearer ${adminToken}`,
+        'Content-Type': 'application/json',
+      },
+    },
+  );
+}
+
+export async function updateKeycloakPassword(
+  adminToken: string,
+  userId: string,
+  newPassword: string,
+) {
+  await axios.put(
+    `${process.env.KEYCLOAK_BASE}/admin/realms/${process.env.KEYCLOAK_REALM}/users/${userId}/reset-password`,
+    {
+      type: 'password',
+      value: newPassword,
+      temporary: false,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${adminToken}`,
+        'Content-Type': 'application/json',
+      },
+    },
+  );
+}
+
+export async function enableKeycloakUser(adminToken: string, userId: string) {
+  await axios.put(
+    `${process.env.KEYCLOAK_BASE}/admin/realms/${process.env.KEYCLOAK_REALM}/users/${userId}`,
+    {
+      enabled: true,
+      emailVerified: true,
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${adminToken}`,
+        'Content-Type': 'application/json',
+      },
+    },
+  );
 }
