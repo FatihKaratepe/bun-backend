@@ -145,6 +145,33 @@ router.post('/login', asyncHandler(AuthController.login));
 
 /**
  * @swagger
+ * /auth/logout:
+ *   post:
+ *     summary: Logout user
+ *     description: Logouts the user by invalidating the refresh token in Keycloak.
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refreshToken
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *                 example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ *       400:
+ *         description: Logout failed or invalid token
+ */
+router.post('/logout', asyncHandler(AuthController.logout));
+
+/**
+ * @swagger
  * /auth/update:
  *   put:
  *     summary: Update user profile

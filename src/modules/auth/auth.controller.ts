@@ -12,7 +12,7 @@ export const AuthController = {
     res.json(tokens);
   },
   logout: async (req: Request, res: Response) => {
-    const tokens = await logout(req.body);
+    const tokens = await logout(req.body.refreshToken);
     res.json(tokens);
   },
   updateProfile: async (req: Request, res: Response) => {
