@@ -1,19 +1,16 @@
 //! IMPORTANT
-USER TYPE OLAYINI DİREKT OLARAK FATURA ADRESİNE TAŞIYACAĞIZ. ADRES YAPISINA FATURA ADRESİ EKLENECEK BUNA BAĞLI OLARAK DA FATURANIN CORPORATE VE BİREYSEL OLMA DURUMU BELİRLENECEK. 
-USERDAN KAYIT ESNASINDA CİNSİYET BİLGİSİ AL KULLANICIDAN DOĞUM TARİHİ ALINACAK. 
-
+USERDAN KAYIT ESNASINDA CİNSİYET BİLGİSİ AL KULLANICIDAN DOĞUM TARİHİ ALINACAK.
 
 # TODO LIST
+
 - Trendyol, Hepsiburada, Amazon ve ETSY Entegrasyonu
-- Sanal POS entegrasyonu 
-
-
+- Sanal POS entegrasyonu
 
 [🇬🇧 English](#bun--express-rest-api) | [🇹🇷 Türkçe](#bun--express-rest-api-1)
 
 # Bun + Express REST API
 
-A layered architecture REST API boilerplate written in **TypeScript**, running on the **Bun** runtime, using **Express**, **Prisma ORM**, and **PostgreSQL**.
+A layered architecture REST API boilerplate written in **TypeScript**, running on the **Bun** runtime, using **Express**, **Prisma ORM**, **PostgreSQL**, and **Keycloak**.
 
 ---
 
@@ -24,7 +21,9 @@ A layered architecture REST API boilerplate written in **TypeScript**, running o
 | [Bun](https://bun.sh)                              | Fast JavaScript/TypeScript runtime & package manager |
 | [Express v5](https://expressjs.com)                | HTTP server framework                                |
 | [Prisma ORM](https://www.prisma.io)                | Type-safe database client for PostgreSQL             |
+| [Keycloak](https://www.keycloak.org)               | Open source identity and access management           |
 | [TypeScript](https://www.typescriptlang.org)       | Static type checking                                 |
+| [Zod](https://zod.dev)                             | Type-first schema declaration and validation         |
 | [Swagger UI](https://swagger.io/tools/swagger-ui/) | Automatic API documentation (`/api-docs`)            |
 | [Helmet](https://helmetjs.github.io)               | HTTP security headers                                |
 | [CORS](https://github.com/expressjs/cors)          | Cross-Origin Resource Sharing support                |
@@ -41,31 +40,31 @@ bun-backend/
 │   ├── config/
 │   │   ├── index.ts           # Config barrel export
 │   │   └── swagger.ts         # Swagger / OpenAPI 3.0 configuration
-│   ├── controllers/
-│   │   ├── index.ts           # Controller barrel export
-│   │   └── user.controller.ts # HTTP request/response handling
-│   ├── services/
-│   │   ├── index.ts           # Service barrel export
-│   │   └── user.service.ts    # Business logic & Prisma queries
+│   ├── modules/
+│   │   ├── auth/              # Authentication module (Keycloak logic, controllers, routes, services)
+│   │   └── user/              # User management module
 │   ├── routes/
 │   │   ├── index.ts           # Route barrel export
+│   │   ├── auth.routes.ts     # /auth endpoint definitions
 │   │   └── user.routes.ts     # /users endpoint definitions
+│   ├── schemas/               # Zod validation schemas
 │   ├── middlewares/
 │   │   ├── index.ts           # Middleware barrel export
 │   │   ├── async-handler.middleware.ts  # Async error wrapper
 │   │   ├── error.middleware.ts          # Centralized error handling
+│   │   ├── auth.middleware.ts           # Keycloak authentication guard
 │   │   └── not-found.middleware.ts      # 404 handler
 │   └── lib/
 │       ├── index.ts           # Lib barrel export
 │       └── prisma.ts          # Prisma Client singleton (pg adapter)
 ├── prisma/
-│   ├── schema.prisma          # Data model definitions
+│   ├── schema.prisma          # Main data model definitions (generated)
+│   ├── models/                # Separated prisma models (user.prisma, address.prisma)
 │   └── migrations/            # Database migration history
 ├── generated/
 │   └── prisma/                # Auto-generated Prisma client
 ├── scripts/
-│   └── merge-prisma.js        # Prisma schema merge helper
-├── script.ts                  # General purpose script
+│   └── merge-prisma.ts        # Prisma schema merge script
 ├── prisma.config.ts           # Prisma CLI configuration
 ├── tsconfig.json              # TypeScript configuration
 ├── package.json
@@ -76,7 +75,7 @@ bun-backend/
 
 ## 🏗️ Architecture
 
-The project follows a **layered architecture** pattern:
+The project follows a **layered architecture** and is being transitioned to **module-based** separation:
 
 ```
 Request
@@ -85,9 +84,11 @@ Router          → URL matching and method routing
     ↓
 asyncHandler    → Catches errors in async functions
     ↓
+Middleware      → Auth checks, validations (Zod)
+    ↓
 Controller      → HTTP only: reads req, writes res
     ↓
-Service         → Business logic, validation, Prisma queries
+Service         → Business logic, Keycloak integration, Prisma queries
     ↓
 Prisma Client   → PostgreSQL database
     ↓
@@ -98,39 +99,65 @@ errorMiddleware → Centralized error handling (AppError / 500)
 
 ## 🗃️ Database Schema
 
-The Prisma schema (`prisma/schema.prisma`) currently contains two models:
+The Prisma schema is generated by combining separate model definition files (`prisma/models/*.prisma`):
 
 ### User
 
-| Field   | Type      | Description                  |
-| ------- | --------- | ---------------------------- |
-| `id`    | `Int`     | Auto-incremented primary key |
-| `email` | `String`  | Unique email address         |
-| `name`  | `String?` | Optional user name           |
-| `posts` | `Post[]`  | User's posts (relation)      |
+| Field             | Type        | Description                       |
+| ----------------- | ----------- | --------------------------------- |
+| `id`              | `String`    | UUID primary key                  |
+| `keycloakId`      | `String`    | Unique ID linked to Keycloak      |
+| `email`           | `String`    | Unique email address              |
+| `firstName`       | `String`    | User's first name                 |
+| `lastName`        | `String`    | User's last name                  |
+| `phone`           | `String?`   | User's phone number               |
+| `isEmailVerified` | `Boolean`   | Email verification state          |
+| `activationToken` | `String?`   | Unique token for email activation |
+| `addresses`       | `Address[]` | User's addresses (relation)       |
 
-### Post
+### Address
 
-| Field       | Type      | Description                           |
-| ----------- | --------- | ------------------------------------- |
-| `id`        | `Int`     | Auto-incremented primary key          |
-| `title`     | `String`  | Post title                            |
-| `content`   | `String?` | Optional content                      |
-| `published` | `Boolean` | Publication status (default: `false`) |
-| `author`    | `User`    | Author relation (`authorId` FK)       |
+| Field         | Type          | Description                                  |
+| ------------- | ------------- | -------------------------------------------- |
+| `id`          | `String`      | UUID primary key                             |
+| `userId`      | `String`      | Relation to User                             |
+| `title`       | `String`      | Address title (e.g. Home, Work)              |
+| `fullName`    | `String`      | Full name for delivery                       |
+| `phone`       | `String`      | Contact phone for address                    |
+| `country`     | `String`      | Country                                      |
+| `city`        | `String`      | City                                         |
+| `district`    | `String`      | District/County                              |
+| `postalCode`  | `String`      | Postal Code                                  |
+| `addressLine` | `String`      | Detailed address line                        |
+| `isBilling`   | `Boolean`     | Flag to determine if it is a billing address |
+| `billingType` | `BillingType` | Corporate or Individual billing (`enum`)     |
+| `companyName` | `String?`     | Company name (if CORPORATE)                  |
+| `taxNumber`   | `String?`     | Tax identification number (if CORPORATE)     |
+| `taxOffice`   | `String?`     | Tax office (if CORPORATE)                    |
 
 ---
 
 ## 🔌 API Endpoints
 
-All endpoints are defined under the `/users` prefix.
+### Authentication (`/auth`)
 
-| Method | URL          | Description                           |
-| ------ | ------------ | ------------------------------------- |
-| `GET`  | `/users`     | List all users (pagination supported) |
-| `GET`  | `/users/:id` | Get a single user by ID               |
-| `POST` | `/users`     | Create a new user                     |
-| `PUT`  | `/users/:id` | Update a user                         |
+| Method | URL                  | Protected | Description                                           |
+| ------ | -------------------- | --------- | ----------------------------------------------------- |
+| `POST` | `/auth/register`     | No        | Register user (creates Keycloak & Postgres instances) |
+| `POST` | `/auth/login`        | No        | Login and receive JWT access/refresh tokens           |
+| `POST` | `/auth/logout`       | No        | Logout user & invalidate token                        |
+| `GET`  | `/auth/verify-email` | No        | Verify user email with token query                    |
+| `POST` | `/auth/verify-email` | No        | Verify user email with token payload                  |
+| `PUT`  | `/auth/update`       | Yes       | Update authenticated user profile                     |
+| `PUT`  | `/auth/password`     | Yes       | Update authenticated user password                    |
+
+### Users (`/users`)
+
+| Method | URL          | Protected | Description                           |
+| ------ | ------------ | --------- | ------------------------------------- |
+| `GET`  | `/users`     | Yes       | List all users (pagination supported) |
+| `GET`  | `/users/:id` | Yes       | Get a single user by ID               |
+| `PUT`  | `/users/:id` | Yes       | Update user info by admin             |
 
 ### Pagination (GET /users)
 
@@ -144,7 +171,7 @@ The `findAll` service supports query parameters:
 
 ### Swagger UI
 
-While the app is running, access the API documentation at:
+While the app is running, access the fully interactive API documentation at:
 
 ```
 http://localhost:3000/api-docs
@@ -158,6 +185,7 @@ http://localhost:3000/api-docs
 
 - [Bun](https://bun.sh) v1.3.1 or higher
 - PostgreSQL database
+- Keycloak server
 
 ### 1. Install Dependencies
 
@@ -167,10 +195,22 @@ bun install
 
 ### 2. Configure Environment Variables
 
-Create a `.env` file and add your database connection URL:
+Create a `.env` file from tracking parameters for Keycloak, DB, SMTP:
 
 ```env
-DATABASE_URL="postgresql://user:password@localhost:5432/database_name"
+DATABASE_URL="postgresql://user:password@localhost:5432/db"
+APP_URL="http://localhost:3000"
+
+KEYCLOAK_BASE="http://localhost:8080"
+KEYCLOAK_REALM="my-realm"
+KEYCLOAK_CLIENT_ID="my-client"
+KEYCLOAK_CLIENT_SECRET="client-secret"
+
+SMTP_HOST="smtp.example.com"
+SMTP_PORT=587
+SMTP_USER="user@example.com"
+SMTP_PASS="password"
+SMTP_MAIL_USERNAME="Example App <user@example.com>"
 ```
 
 ### 3. Generate Prisma Client
@@ -182,7 +222,7 @@ bun run prisma:generate
 ### 4. Apply Migrations
 
 ```bash
-bunx prisma migrate dev
+bunx --bun prisma migrate dev
 ```
 
 ### 5. Start the App
@@ -199,53 +239,13 @@ bun run dev
 bun run start
 ```
 
-The server starts at `http://localhost:3000`.
-
----
-
-## 🛡️ Middlewares
-
-| Middleware           | Description                                                |
-| -------------------- | ---------------------------------------------------------- |
-| `helmet`             | Adds security-focused HTTP headers                         |
-| `cors`               | Allows cross-origin requests                               |
-| `morgan`             | Logs HTTP requests in `dev` format                         |
-| `asyncHandler`       | Forwards async errors in controllers to `next(err)`        |
-| `errorMiddleware`    | Returns `AppError` with its status code, all others as 500 |
-| `notFoundMiddleware` | Returns 404 for undefined routes                           |
-
----
-
-## 🗂️ TypeScript Path Aliases
-
-Aliases defined in `tsconfig.json` avoid long relative import paths:
-
-| Alias          | Maps To             |
-| -------------- | ------------------- |
-| `@controllers` | `./src/controllers` |
-| `@routes`      | `./src/routes`      |
-| `@services`    | `./src/services`    |
-| `@lib`         | `./src/lib`         |
-| `@middlewares` | `./src/middlewares` |
-| `@config`      | `./src/config`      |
-
----
-
-## 📝 Scripts
-
-| Script                    | Description                                          |
-| ------------------------- | ---------------------------------------------------- |
-| `bun run dev`             | Start in development mode (watches for file changes) |
-| `bun run start`           | Start in production mode                             |
-| `bun run prisma:generate` | Merge Prisma schemas and regenerate the client       |
-
 ---
 
 ---
 
 # Bun + Express REST API
 
-TypeScript ile yazılmış, **Bun** runtime üzerinde çalışan, **Express**, **Prisma ORM** ve **PostgreSQL** kullanan katmanlı mimari REST API boilerplate'i.
+TypeScript ile yazılmış, **Bun** runtime üzerinde çalışan, **Express**, **Prisma ORM**, **PostgreSQL** ve **Keycloak** kullanan REST API boilerplate'i.
 
 ---
 
@@ -256,7 +256,9 @@ TypeScript ile yazılmış, **Bun** runtime üzerinde çalışan, **Express**, *
 | [Bun](https://bun.sh)                              | Hızlı JavaScript/TypeScript runtime & paket yöneticisi |
 | [Express v5](https://expressjs.com)                | HTTP sunucu framework'ü                                |
 | [Prisma ORM](https://www.prisma.io)                | PostgreSQL için tip-güvenli veritabanı istemcisi       |
+| [Keycloak](https://www.keycloak.org)               | Açık kaynak kimlik doğrulama yönetim sistemi           |
 | [TypeScript](https://www.typescriptlang.org)       | Statik tip denetimi                                    |
+| [Zod](https://zod.dev)                             | Nesne tabanlı dinamik veri doğrulama                   |
 | [Swagger UI](https://swagger.io/tools/swagger-ui/) | Otomatik API dokümantasyonu (`/api-docs`)              |
 | [Helmet](https://helmetjs.github.io)               | HTTP güvenlik başlıkları                               |
 | [CORS](https://github.com/expressjs/cors)          | Cross-Origin Resource Sharing desteği                  |
@@ -273,114 +275,100 @@ bun-backend/
 │   ├── config/
 │   │   ├── index.ts           # Config barrel export
 │   │   └── swagger.ts         # Swagger / OpenAPI 3.0 ayarları
-│   ├── controllers/
-│   │   ├── index.ts           # Controller barrel export
-│   │   └── user.controller.ts # HTTP istek/yanıt yönetimi
-│   ├── services/
-│   │   ├── index.ts           # Service barrel export
-│   │   └── user.service.ts    # İş mantığı & Prisma sorguları
+│   ├── modules/
+│   │   ├── auth/              # Kimlik doğrulama (Keycloak entegre iş mantığı)
+│   │   └── user/              # Kullanıcı yönetimi sistemi
 │   ├── routes/
 │   │   ├── index.ts           # Route barrel export
+│   │   ├── auth.routes.ts     # /auth endpoint tanımları
 │   │   └── user.routes.ts     # /users endpoint tanımları
+│   ├── schemas/               # Zod validasyon şemaları
 │   ├── middlewares/
 │   │   ├── index.ts           # Middleware barrel export
 │   │   ├── async-handler.middleware.ts  # Async hata sarmalayıcı
 │   │   ├── error.middleware.ts          # Merkezi hata yönetimi
+│   │   ├── auth.middleware.ts           # Keycloak doğrulama guard'ı
 │   │   └── not-found.middleware.ts      # 404 yakalayıcı
 │   └── lib/
 │       ├── index.ts           # Lib barrel export
-│       └── prisma.ts          # Prisma Client singleton (pg adapter)
+│       └── prisma.ts          # Prisma Client singleton
 ├── prisma/
-│   ├── schema.prisma          # Veri modeli tanımları
-│   └── migrations/            # Veritabanı migration geçmişi
+│   ├── schema.prisma          # Birleştirilmiş prisma modeli (otomatik oluşturulan)
+│   ├── models/                # Modülerleştirilmiş veritabanı şemaları (user, address vs.)
+│   └── migrations/            # Veritabanı göç geçmişi
 ├── generated/
-│   └── prisma/                # Prisma tarafından otomatik üretilen client
+│   └── prisma/                # Otomatik üretilmiş prisma client
 ├── scripts/
-│   └── merge-prisma.js        # Prisma schema birleştirme yardımcısı
-├── script.ts                  # Genel amaçlı komut dosyası
+│   └── merge-prisma.ts        # Prisma şema birleştirme (merge) scripti
 ├── prisma.config.ts           # Prisma CLI yapılandırması
 ├── tsconfig.json              # TypeScript yapılandırması
 ├── package.json
-└── .env                       # Ortam değişkenleri (git'e dahil edilmez)
-```
-
----
-
-## 🏗️ Mimari
-
-Proje **katmanlı mimari (layered architecture)** prensibine göre tasarlanmıştır:
-
-```
-İstek (Request)
-    ↓
-Router        → URL eşleştirme ve method yönlendirme
-    ↓
-asyncHandler  → Async fonksiyonlardaki hataları yakalar
-    ↓
-Controller    → Sadece HTTP: req/res okuma ve yanıt yazma
-    ↓
-Service       → İş mantığı, doğrulama ve Prisma sorguları
-    ↓
-Prisma Client → PostgreSQL veritabanı
-    ↓
-errorMiddleware → Merkezi hata yönetimi (AppError / 500)
+└── .env                       # Çevresel değişkenler (git'e eklenmez)
 ```
 
 ---
 
 ## 🗃️ Veritabanı Şeması
 
-Prisma şeması (`prisma/schema.prisma`) şu an iki model içermektedir:
+Projedeki Prisma modelleri ayrı dosyalarda barınmakta (`prisma/models/*`) ve betik ile tek bir dosyaya (schema.prisma) çevrilmektedir.
 
-### User
+### User Modeli
 
-| Alan    | Tip       | Açıklama                        |
-| ------- | --------- | ------------------------------- |
-| `id`    | `Int`     | Otomatik artan birincil anahtar |
-| `email` | `String`  | Benzersiz e-posta adresi        |
-| `name`  | `String?` | Opsiyonel kullanıcı adı         |
-| `posts` | `Post[]`  | Kullanıcının yazıları (ilişki)  |
+| Alan              | Tip         | Açıklama                                        |
+| ----------------- | ----------- | ----------------------------------------------- |
+| `id`              | `String`    | UUID Birincil anahtar                           |
+| `keycloakId`      | `String`    | Keycloak id'si ile benzersiz eşleşme            |
+| `email`           | `String`    | Benzersiz E-posta adresi                        |
+| `firstName`       | `String`    | Kullanıcı adı                                   |
+| `lastName`        | `String`    | Kullanıcı soyadı                                |
+| `phone`           | `String?`   | Telefon numarası                                |
+| `isEmailVerified` | `Boolean`   | Hesabın doğrulanıp doğrulanmadığı               |
+| `activationToken` | `String?`   | Hesabı aktifleştirme sırasında kullanılan token |
+| `addresses`       | `Address[]` | Kullanıcının adresleri (ilişkisel tablo)        |
 
-### Post
+### Address Modeli
 
-| Alan        | Tip       | Açıklama                           |
-| ----------- | --------- | ---------------------------------- |
-| `id`        | `Int`     | Otomatik artan birincil anahtar    |
-| `title`     | `String`  | Yazı başlığı                       |
-| `content`   | `String?` | Opsiyonel içerik                   |
-| `published` | `Boolean` | Yayın durumu (varsayılan: `false`) |
-| `author`    | `User`    | Yazar ilişkisi (`authorId` FK)     |
+| Alan          | Tip           | Açıklama                                            |
+| ------------- | ------------- | --------------------------------------------------- |
+| `id`          | `String`      | UUID Birincil anahtar                               |
+| `userId`      | `String`      | User modeline referans                              |
+| `title`       | `String`      | Adres başlığı (Örn: Ev, İş)                         |
+| `fullName`    | `String`      | Teslim alacak kişinin tam adı                       |
+| `phone`       | `String`      | Adres iletişim numarası                             |
+| `country`     | `String`      | Ülke                                                |
+| `city`        | `String`      | Şehir                                               |
+| `district`    | `String`      | İlçe                                                |
+| `postalCode`  | `String`      | Posta kodu                                          |
+| `addressLine` | `String`      | Tam açık adres                                      |
+| `isBilling`   | `Boolean`     | Fatura adresi mi? (`true`/`false`)                  |
+| `billingType` | `BillingType` | Kurumsal (`CORPORATE`) veya Bireysel (`INDIVIDUAL`) |
+| `companyName` | `String?`     | Şirket adı (eğer kurumsal ise)                      |
+| `taxNumber`   | `String?`     | Vergi No (eğer kurumsal ise)                        |
+| `taxOffice`   | `String?`     | Vergi dairesi (eğer kurumsal ise)                   |
 
 ---
 
 ## 🔌 API Endpoint'leri
 
-Tüm endpoint'ler `/users` prefix'i altında tanımlıdır.
+### Kimlik Doğrulama (`/auth`)
 
-| Method | URL          | Açıklama                                        |
-| ------ | ------------ | ----------------------------------------------- |
-| `GET`  | `/users`     | Tüm kullanıcıları listeler (sayfalama destekli) |
-| `GET`  | `/users/:id` | ID'ye göre tek kullanıcı getirir                |
-| `POST` | `/users`     | Yeni kullanıcı oluşturur                        |
-| `PUT`  | `/users/:id` | Kullanıcıyı günceller                           |
+| Method | URL                  | Koruma | Açıklama                                                                   |
+| ------ | -------------------- | ------ | -------------------------------------------------------------------------- |
+| `POST` | `/auth/register`     | Yok    | Yeni kullanıcı oluşturur (Keycloak'ta da oluşturur ve onay maili atar).    |
+| `POST` | `/auth/login`        | Yok    | Keycloak üzerinden login ile access ve refresh token döndürür.             |
+| `POST` | `/auth/logout`       | Yok    | Keycloak'taki oturumu/refresh token'ı sonlandırır.                         |
+| `GET`  | `/auth/verify-email` | Yok    | Kullanıcının hesabını doğrulamasını sağlar (link url üzerinden token ile). |
+| `POST` | `/auth/verify-email` | Yok    | Kullanıcının hesabını doğrulamasını sağlar (request body'den token ile).   |
+| `PUT`  | `/auth/update`       | Var    | Login olan kullanıcının profil bilgilerini (isim, telefon vb) günceller.   |
+| `PUT`  | `/auth/password`     | Var    | Login olan kullanıcının parolasını Keycloak üzerinden günceller.           |
 
-### Sayfalama (GET /users)
+### Kullanıcılar (`/users`)
 
-`findAll` servisi query parametrelerini destekler:
-
-| Parametre | Varsayılan  | Açıklama                  |
-| --------- | ----------- | ------------------------- |
-| `page`    | `1`         | Sayfa numarası            |
-| `limit`   | `10`        | Sayfa başına kayıt sayısı |
-| `sort`    | `createdAt` | Sıralama alanı            |
-
-### Swagger UI
-
-Uygulama çalışırken API dokümantasyonuna şu adresten erişilebilir:
-
-```
-http://localhost:3000/api-docs
-```
+| Method | URL          | Koruma | Açıklama                                        |
+| ------ | ------------ | ------ | ----------------------------------------------- |
+| `GET`  | `/users`     | Var    | Tüm kullanıcıları listeler (sayfalama destekli) |
+| `GET`  | `/users/:id` | Var    | ID'ye göre tek kullanıcı getirir                |
+| `PUT`  | `/users/:id` | Var    | Kullanıcıyı admin/yetkili günceller             |
 
 ---
 
@@ -389,84 +377,22 @@ http://localhost:3000/api-docs
 ### Gereksinimler
 
 - [Bun](https://bun.sh) v1.3.1 veya üstü
-- PostgreSQL veritabanı
+- PostgreSQL
+- Keycloak Sunucusu
 
-### 1. Bağımlılıkları Yükle
+### Başlatma Adımları
 
 ```bash
 bun install
-```
 
-### 2. Ortam Değişkenlerini Ayarla
+# Daha sonra .env dosyanızı uygun paramaterler (Aşağıya/İngilizce kısma bakınız) ekleyerek doldurun.
 
-`.env` dosyasını oluşturun ve veritabanı bağlantı URL'sini ekleyin:
-
-```env
-DATABASE_URL="postgresql://kullanici:sifre@localhost:5432/veritabani_adi"
-```
-
-### 3. Prisma Client'ı Oluştur
-
-```bash
 bun run prisma:generate
-```
 
-### 4. Migration Uygula
+bunx --bun prisma migrate dev
 
-```bash
-bunx prisma migrate dev
-```
-
-### 5. Uygulamayı Başlat
-
-**Geliştirme (hot-reload):**
-
-```bash
+# Geliştirme ortamında çalışmak için
 bun run dev
 ```
 
-**Production:**
-
-```bash
-bun run start
-```
-
-Sunucu `http://localhost:3000` adresinde ayağa kalkar.
-
----
-
-## 🛡️ Middleware'ler
-
-| Middleware           | Açıklama                                                      |
-| -------------------- | ------------------------------------------------------------- |
-| `helmet`             | Güvenlik odaklı HTTP başlıkları ekler                         |
-| `cors`               | Cross-Origin isteklerine izin verir                           |
-| `morgan`             | `dev` formatında HTTP istek logları basar                     |
-| `asyncHandler`       | Controller'lardaki async hataları `next(err)`'e iletir        |
-| `errorMiddleware`    | `AppError` ile özel hataları, diğer hataları 500 olarak döner |
-| `notFoundMiddleware` | Tanımlanmayan route'lar için 404 yanıt üretir                 |
-
----
-
-## 🗂️ TypeScript Path Alias'ları
-
-`tsconfig.json` içinde tanımlı kısayollar sayesinde uzun göreli import yollarından kaçınılır:
-
-| Alias          | Karşılık            |
-| -------------- | ------------------- |
-| `@controllers` | `./src/controllers` |
-| `@routes`      | `./src/routes`      |
-| `@services`    | `./src/services`    |
-| `@lib`         | `./src/lib`         |
-| `@middlewares` | `./src/middlewares` |
-| `@config`      | `./src/config`      |
-
----
-
-## 📝 Komutlar
-
-| Komut                     | Açıklama                                                   |
-| ------------------------- | ---------------------------------------------------------- |
-| `bun run dev`             | Geliştirme modunda başlatır (dosya değişikliklerini izler) |
-| `bun run start`           | Production modunda başlatır                                |
-| `bun run prisma:generate` | Prisma şemalarını birleştirir ve Client'ı yeniden üretir   |
+API belgeleri için `http://localhost:3000/api-docs` sayfasına göz atabilirsiniz.
