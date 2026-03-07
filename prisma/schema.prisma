@@ -15,17 +15,10 @@ datasource db {
 
 // ===== ADDRESS =====
 
-
-
-// ===== USER =====
-
-
-// ===== ADDRESS =====
-
 model Address {
   id          String   @id @default(uuid())
   userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   title       String  
   fullName    String
@@ -37,38 +30,38 @@ model Address {
   postalCode  String
   addressLine String
 
-  isInvoice   Boolean  @default(false)
-  isShipping  Boolean  @default(true)
+  isBilling   Boolean  @default(false)
+
+  // Billing specific fields
+  billingType BillingType? @default(INDIVIDUAL)
+  companyName String?
+  taxNumber   String?
+  taxOffice   String?
 
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum BillingType {
+  INDIVIDUAL
+  CORPORATE
 }
 
 // ===== USER =====
 
 model User {
-  id            String   @id @default(uuid())
-  keycloakId    String   @unique
-  email         String
-  firstName     String
-  lastName      String
-  phone         String
+  id              String   @id @default(uuid())
+  keycloakId      String   @unique
+  email           String   @unique
+  firstName       String
+  lastName        String
+  phone           String?
 
-  isEmailVerified Boolean @default(false)
-  activationToken String? @unique
+  isEmailVerified Boolean  @default(false)
+  activationToken String?  @unique
 
-  userType      UserType @default(INDIVIDUAL)
+  addresses       Address[]
 
-  companyName   String?
-  taxNumber     String?
-  taxOffice     String?
-
-  addresses     Address[]
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-
-enum UserType {
-  INDIVIDUAL
-  CORPORATE
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

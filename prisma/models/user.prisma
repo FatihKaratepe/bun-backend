@@ -1,27 +1,16 @@
 model User {
-  id            String   @id @default(uuid())
-  keycloakId    String   @unique
-  email         String
-  firstName     String
-  lastName      String
-  phone         String
+  id              String   @id @default(uuid())
+  keycloakId      String   @unique
+  email           String   @unique
+  firstName       String
+  lastName        String
+  phone           String?
 
-  isEmailVerified Boolean @default(false)
-  activationToken String? @unique
+  isEmailVerified Boolean  @default(false)
+  activationToken String?  @unique
 
-  userType      UserType @default(INDIVIDUAL)
+  addresses       Address[]
 
-  companyName   String?
-  taxNumber     String?
-  taxOffice     String?
-
-  addresses     Address[]
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-
-enum UserType {
-  INDIVIDUAL
-  CORPORATE
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

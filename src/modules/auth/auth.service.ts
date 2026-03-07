@@ -12,10 +12,6 @@ export async function register(dto: {
   firstName: string;
   lastName: string;
   phone: string;
-  userType: 'INDIVIDUAL' | 'CORPORATE';
-  companyName?: string;
-  taxNumber?: string;
-  taxOffice?: string;
 }) {
   const { password, ...userData } = dto;
 
@@ -43,10 +39,6 @@ export async function register(dto: {
         firstName: userData.firstName,
         lastName: userData.lastName,
         phone: userData.phone,
-        userType: userData.userType,
-        companyName: userData.companyName,
-        taxNumber: userData.taxNumber,
-        taxOffice: userData.taxOffice,
         activationToken,
       },
     });
@@ -127,9 +119,6 @@ export async function updateUser(
     firstName?: string;
     lastName?: string;
     phone?: string;
-    companyName?: string;
-    taxNumber?: string;
-    taxOffice?: string;
   }
 ) {
   const adminToken = await getAdminToken();
@@ -147,9 +136,6 @@ export async function updateUser(
       firstName: dto.firstName,
       lastName: dto.lastName,
       phone: dto.phone,
-      companyName: dto.companyName,
-      taxNumber: dto.taxNumber,
-      taxOffice: dto.taxOffice,
     },
   });
 

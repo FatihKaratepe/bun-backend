@@ -23,7 +23,7 @@ router.use(authMiddleware);
  *       bearerFormat: JWT
  *       description: Keycloak JWT token
  *   schemas:
- *     UserType:
+ *     BillingType:
  *       type: string
  *       enum: [INDIVIDUAL, CORPORATE]
  *       example: INDIVIDUAL
@@ -53,20 +53,7 @@ router.use(authMiddleware);
  *           type: string
  *           nullable: true
  *           example: "+905001234567"
- *         userType:
- *           $ref: '#/components/schemas/UserType'
- *         companyName:
- *           type: string
- *           nullable: true
- *           example: Acme Corp
- *         taxNumber:
- *           type: string
- *           nullable: true
- *           example: "1234567890"
- *         taxOffice:
- *           type: string
- *           nullable: true
- *           example: Kadıköy
+
  *         addresses:
  *           type: array
  *           items:
@@ -99,17 +86,7 @@ router.use(authMiddleware);
  *         phone:
  *           type: string
  *           example: "+905001234567"
- *         userType:
- *           $ref: '#/components/schemas/UserType'
- *         companyName:
- *           type: string
- *           example: Acme Corp
- *         taxNumber:
- *           type: string
- *           example: "1234567890"
- *         taxOffice:
- *           type: string
- *           example: Kadıköy
+
  *     UpdateUserInput:
  *       type: object
  *       properties:
@@ -126,17 +103,7 @@ router.use(authMiddleware);
  *         phone:
  *           type: string
  *           example: "+905001234567"
- *         userType:
- *           $ref: '#/components/schemas/UserType'
- *         companyName:
- *           type: string
- *           example: Acme Corp
- *         taxNumber:
- *           type: string
- *           example: "1234567890"
- *         taxOffice:
- *           type: string
- *           example: Kadıköy
+
  *     Address:
  *       type: object
  *       properties:
@@ -170,12 +137,23 @@ router.use(authMiddleware);
  *         addressLine:
  *           type: string
  *           example: Moda Cad. No:1
- *         isInvoice:
+ *         isBilling:
  *           type: boolean
  *           example: false
- *         isShipping:
- *           type: boolean
- *           example: true
+ *         billingType:
+ *           $ref: '#/components/schemas/BillingType'
+ *         companyName:
+ *           type: string
+ *           nullable: true
+ *           example: Tech Corp
+ *         taxNumber:
+ *           type: string
+ *           nullable: true
+ *           example: "1234567890"
+ *         taxOffice:
+ *           type: string
+ *           nullable: true
+ *           example: Kadıköy
  *         createdAt:
  *           type: string
  *           format: date-time
