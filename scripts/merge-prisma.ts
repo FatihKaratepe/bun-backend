@@ -11,7 +11,8 @@ const schemaPath = path.join(prismaDir, 'schema.prisma');
 
 const originalSchema = fs.readFileSync(schemaPath, 'utf-8');
 
-const header = originalSchema.replace(/(model|enum|type)\s+\w+\s+{[^}]*}/gms, '');
+let header = originalSchema.replace(/(model|enum|type)\s+\w+\s+{[^}]*}/gms, '');
+header = header.replace(/\/\/\s*=====\s*[A-Z_]+\s*=====\s*\n*/g, '');
 
 const modelFiles = fs.readdirSync(modelsDir).filter((file) => file.endsWith('.prisma'));
 
