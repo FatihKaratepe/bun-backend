@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "bun --watch src/server.ts",
     "start": "bun src/server.ts",
-    "prisma:generate": "bun scripts/merge-prisma.ts && bunx --bun prisma generate"
+    "prisma:generate": "bun scripts/merge-prisma.ts && bunx --bun prisma generate",
+    "prisma:push": "bun scripts/merge-prisma.ts && bunx --bun prisma db push",
+    "prisma:reset": "bun scripts/merge-prisma.ts && bunx --bun prisma migrate reset"
   },
   "devDependencies": {
     "@types/bun": "latest",

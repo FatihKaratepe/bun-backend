@@ -4,10 +4,11 @@ import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import swaggerUi from 'swagger-ui-express';
+import path from 'path';
 
 import { accessLogStream, customSwaggerOptions, swaggerSpec } from '@config';
 import { errorMiddleware, notFoundMiddleware } from '@middlewares';
-import { AuthRoutes, UserRoutes } from '@routes';
+import { AuthRoutes, UserRoutes, CompanyRoutes } from '@routes';
 import { logFactory } from '@utils';
 
 const app = express();
@@ -73,6 +74,7 @@ app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 // ========================
 // 5️⃣ STATIC / SWAGGER / FAVICON
 // ========================
+app.use(express.static(path.join(process.cwd(), 'public')));
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, customSwaggerOptions));
 app.get('/swagger.json', (req, res) => res.json(swaggerSpec));
@@ -82,6 +84,7 @@ app.get('/swagger.json', (req, res) => res.json(swaggerSpec));
 // ========================
 app.use('/auth', AuthRoutes);
 app.use('/users', UserRoutes);
+app.use('/company', CompanyRoutes);
 
 app.get('/', (req, res) => {
   res.send('Hello Bun + Express!');
