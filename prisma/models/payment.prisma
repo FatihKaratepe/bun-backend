@@ -1,0 +1,36 @@
+model Payment {
+  id              String        @id @default(uuid())
+  orderId         String        @unique
+  order           Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  method          PaymentMethod
+  status          PaymentStatus @default(PENDING)
+
+  amount          Decimal       @db.Decimal(10, 2)
+  currency        String        @default("TRY")
+
+  transactionId   String?       @unique
+  providerRef     String?
+
+  paidAt          DateTime?
+  failedAt        DateTime?
+  refundedAt      DateTime?
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([status])
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  BANK_TRANSFER
+  CASH_ON_DELIVERY
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
