@@ -10,6 +10,10 @@ model User {
   activationToken String?  @unique
 
   addresses       Address[]
+  reviews         Review[]
+  orders          Order[]
+  cart            Cart?
+  wishlistItems   WishlistItem[]
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

@@ -15,10 +15,13 @@ model Address {
 
   isBilling   Boolean  @default(false)
 
-  billingType BillingType? @default(INDIVIDUAL)
+  billingType BillingType?
   companyName String?
   taxNumber   String?
   taxOffice   String?
+
+  shippingOrders Order[] @relation("ShippingAddress")
+  billingOrders  Order[] @relation("BillingAddress")
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
