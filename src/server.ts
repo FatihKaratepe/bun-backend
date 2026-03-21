@@ -8,7 +8,7 @@ import path from 'path';
 
 import { accessLogStream, customSwaggerOptions, swaggerSpec } from '@config';
 import { errorMiddleware, notFoundMiddleware } from '@middlewares';
-import { AuthRoutes, UserRoutes, CompanyRoutes } from '@routes';
+import { AuthRoutes, UserRoutes, CompanyRoutes, ProductRoutes } from '@routes';
 import { logFactory } from '@utils';
 
 const app = express();
@@ -85,6 +85,7 @@ app.get('/swagger.json', (req, res) => res.json(swaggerSpec));
 app.use('/auth', AuthRoutes);
 app.use('/users', UserRoutes);
 app.use('/company', CompanyRoutes);
+app.use('/products', ProductRoutes);
 
 app.get('/', (req, res) => {
   res.send('Hello Bun + Express!');
