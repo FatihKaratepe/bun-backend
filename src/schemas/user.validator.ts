@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-// --- Base schema (tam model, DB'den gelen veri) ---
 export const userValidatorSchema = z.object({
   id: z.uuid({ message: 'User ID must be a valid UUID' }),
   keycloakId: z.string().min(1, { error: 'Keycloak ID is required' }),
@@ -22,7 +21,6 @@ export const userValidatorSchema = z.object({
   updatedAt: z.iso.datetime({ message: 'Invalid date format' }),
 });
 
-// --- Create schema: Adres hariç tüm alanlar zorunlu ---
 export const createUserValidatorSchema = z
   .object({
     keycloakId: z.string().min(1, { error: 'Keycloak ID is required' }),
@@ -42,7 +40,6 @@ export const createUserValidatorSchema = z
       .regex(/^\+?[0-9\s\-()]{7,20}$/, { message: 'Please provide a valid phone number' }),
   });
 
-// --- Update schema: Tüm alanlar opsiyonel, keycloakId hariç ---
 const updateBaseSchema = z.object({
   email: z
     .email({ message: 'Please provide a valid email address' })
