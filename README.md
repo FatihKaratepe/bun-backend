@@ -10,7 +10,7 @@ USERDAN KAYIT ESNASINDA CİNSİYET BİLGİSİ AL KULLANICIDAN DOĞUM TARİHİ AL
 
 # Bun + Express REST API
 
-A layered architecture REST API boilerplate written in **TypeScript**, running on the **Bun** runtime, using **Express**, **Prisma ORM**, **PostgreSQL**, and **Keycloak**.
+A layered architecture e-commerce REST API written in **TypeScript**, running on the **Bun** runtime, using **Express**, **Prisma ORM**, **PostgreSQL**, and **Keycloak**.
 
 ---
 
@@ -36,46 +36,85 @@ A layered architecture REST API boilerplate written in **TypeScript**, running o
 ```
 bun-backend/
 ├── src/
-│   ├── server.ts              # Application entry point, Express setup
+│   ├── server.ts                # Application entry point, Express setup
 │   ├── config/
-│   │   ├── index.ts           # Config barrel export
-│   │   └── swagger.ts         # Swagger / OpenAPI 3.0 configuration
+│   │   ├── index.ts             # Config barrel export
+│   │   ├── morgan-logger.ts     # Morgan HTTP logger configuration
+│   │   ├── nodemailler.ts       # Nodemailer email configuration
+│   │   └── swagger.ts           # Swagger / OpenAPI 3.0 configuration
 │   ├── modules/
-│   │   ├── auth/              # Authentication module (Keycloak logic, controllers, routes, services)
-│   │   └── user/              # User management module
+│   │   ├── auth/                # Authentication module
+│   │   │   ├── auth.controller.ts
+│   │   │   ├── auth.service.ts
+│   │   │   └── keycloak.service.ts
+│   │   ├── user/                # User management module
+│   │   │   ├── user.controller.ts
+│   │   │   └── user.service.ts
+│   │   ├── company/             # Company setup module
+│   │   │   ├── company.controller.ts
+│   │   │   └── company.service.ts
+│   │   └── product/             # Product management module
+│   │       ├── product.controller.ts
+│   │       └── product.service.ts
 │   ├── routes/
-│   │   ├── index.ts           # Route barrel export
-│   │   ├── auth.routes.ts     # /auth endpoint definitions
-│   │   └── user.routes.ts     # /users endpoint definitions
-│   ├── schemas/               # Zod validation schemas
+│   │   ├── index.ts             # Route barrel export
+│   │   ├── auth.routes.ts       # /auth endpoint definitions
+│   │   ├── user.routes.ts       # /users endpoint definitions
+│   │   ├── company.routes.ts    # /company endpoint definitions
+│   │   └── product.routes.ts    # /products endpoint definitions
+│   ├── schemas/                 # Zod validation schemas
+│   │   ├── index.ts
+│   │   ├── user.validator.ts
+│   │   └── product.validator.ts
 │   ├── middlewares/
-│   │   ├── index.ts           # Middleware barrel export
+│   │   ├── index.ts             # Middleware barrel export
 │   │   ├── async-handler.middleware.ts  # Async error wrapper
 │   │   ├── error.middleware.ts          # Centralized error handling
 │   │   ├── auth.middleware.ts           # Keycloak authentication guard
 │   │   └── not-found.middleware.ts      # 404 handler
+│   ├── utils/
+│   │   ├── index.ts             # Utils barrel export
+│   │   ├── auth.ts              # Authentication utilities
+│   │   └── logger.ts            # Application logger
+│   ├── types/
+│   │   └── express.d.ts         # Express type augmentation
 │   └── lib/
-│       ├── index.ts           # Lib barrel export
-│       └── prisma.ts          # Prisma Client singleton (pg adapter)
+│       ├── index.ts             # Lib barrel export
+│       └── prisma.ts            # Prisma Client singleton (pg adapter)
 ├── prisma/
-│   ├── schema.prisma          # Main data model definitions (generated)
-│   ├── models/                # Separated prisma models (user.prisma, address.prisma)
-│   └── migrations/            # Database migration history
+│   ├── schema.prisma            # Main data model definitions (generated)
+│   ├── models/                  # Separated prisma models (14 model files)
+│   │   ├── user.prisma
+│   │   ├── address.prisma
+│   │   ├── company.prisma
+│   │   ├── product.prisma
+│   │   ├── product-variant.prisma
+│   │   ├── product-image.prisma
+│   │   ├── category.prisma
+│   │   ├── brand.prisma
+│   │   ├── cart.prisma
+│   │   ├── order.prisma
+│   │   ├── payment.prisma
+│   │   ├── coupon.prisma
+│   │   ├── review.prisma
+│   │   └── wishlist.prisma
+│   └── migrations/              # Database migration history
 ├── generated/
-│   └── prisma/                # Auto-generated Prisma client
+│   └── prisma/                  # Auto-generated Prisma client
 ├── scripts/
-│   └── merge-prisma.ts        # Prisma schema merge script
-├── prisma.config.ts           # Prisma CLI configuration
-├── tsconfig.json              # TypeScript configuration
+│   └── merge-prisma.ts          # Prisma schema merge script
+├── public/                      # Static files
+├── prisma.config.ts             # Prisma CLI configuration
+├── tsconfig.json                # TypeScript configuration
 ├── package.json
-└── .env                       # Environment variables (not committed to git)
+└── .env                         # Environment variables (not committed to git)
 ```
 
 ---
 
 ## 🏗️ Architecture
 
-The project follows a **layered architecture** and is being transitioned to **module-based** separation:
+The project follows a **module-based layered architecture**:
 
 ```
 Request
@@ -84,7 +123,7 @@ Router          → URL matching and method routing
     ↓
 asyncHandler    → Catches errors in async functions
     ↓
-Middleware      → Auth checks, validations (Zod)
+Middleware      → Auth checks (Keycloak JWT), validations (Zod)
     ↓
 Controller      → HTTP only: reads req, writes res
     ↓
@@ -95,11 +134,17 @@ Prisma Client   → PostgreSQL database
 errorMiddleware → Centralized error handling (AppError / 500)
 ```
 
+**Security Stack:**
+- Helmet with custom CSP directives
+- CORS support
+- Rate limiting (100 requests / 15 min per IP)
+- JWT-based authentication via Keycloak
+
 ---
 
 ## 🗃️ Database Schema
 
-The Prisma schema is generated by combining separate model definition files (`prisma/models/*.prisma`):
+The Prisma schema is generated by combining separate model definition files (`prisma/models/*.prisma`). The project includes **14 models** covering a full e-commerce domain:
 
 ### User
 
@@ -135,6 +180,58 @@ The Prisma schema is generated by combining separate model definition files (`pr
 | `taxNumber`   | `String?`     | Tax identification number (if CORPORATE)     |
 | `taxOffice`   | `String?`     | Tax office (if CORPORATE)                    |
 
+### Company
+
+| Field    | Type     | Description                                                                 |
+| -------- | -------- | --------------------------------------------------------------------------- |
+| `id`     | `String` | UUID primary key                                                            |
+| `name`   | `String` | Company name                                                                |
+| `title`  | `String` | Company title                                                               |
+| ...      | ...      | Full company details: description, URLs, tax info, social media, address    |
+
+### Product
+
+| Field              | Type       | Description                        |
+| ------------------ | ---------- | ---------------------------------- |
+| `id`               | `String`   | UUID primary key                   |
+| `name`             | `String`   | Product name (unique)              |
+| `slug`             | `String`   | URL-friendly slug (unique)         |
+| `sku`              | `String`   | Stock Keeping Unit (unique)        |
+| `barcode`          | `String?`  | Barcode (unique)                   |
+| `basePrice`        | `Decimal`  | Base price                         |
+| `salePrice`        | `Decimal?` | Sale/discount price                |
+| `currency`         | `String`   | Currency code (default: TRY)       |
+| `taxRate`          | `Decimal`  | Tax rate percentage                |
+| `stock`            | `Int`      | Stock quantity                     |
+| `lowStockThreshold`| `Int`      | Low stock alert threshold          |
+| `trackStock`       | `Boolean`  | Whether to track stock             |
+| `weight/width/height/length` | `Float?` | Physical dimensions       |
+| `isActive`         | `Boolean`  | Active status                      |
+| `isFeatured`       | `Boolean`  | Featured product flag              |
+| `metaTitle`        | `String?`  | SEO title                          |
+| `metaDescription`  | `String?`  | SEO description                    |
+| `categoryId`       | `String?`  | Relation to Category               |
+| `brandId`          | `String?`  | Relation to Brand                  |
+
+### Other Models
+
+| Model            | Description                                                       |
+| ---------------- | ----------------------------------------------------------------- |
+| `ProductVariant` | Product options (color, size, etc.) with SKU, price, stock, JSON attributes |
+| `ProductImage`   | Product gallery with URL, alt text, sort order, primary flag      |
+| `Category`       | Hierarchical product categories (self-referencing parentId)       |
+| `Brand`          | Product brands with name, slug, logo                              |
+| `Cart`           | Shopping cart per user (1:1 relation)                             |
+| `CartItem`       | Cart contents with product, variant, quantity                     |
+| `Order`          | Customer orders with status, pricing, shipping/billing addresses  |
+| `OrderItem`      | Order line items with snapshot of product data at time of order   |
+| `Payment`        | Order payments (credit card, bank transfer, cash on delivery)     |
+| `Coupon`         | Discount coupons (percentage or fixed amount)                     |
+| `Review`         | Product reviews with rating, title, comment                       |
+| `WishlistItem`   | User saved/favorited products                                    |
+
+**Enums:** `BillingType`, `OrderStatus`, `PaymentMethod`, `PaymentStatus`, `DiscountType`
+
 ---
 
 ## 🔌 API Endpoints
@@ -159,15 +256,63 @@ The Prisma schema is generated by combining separate model definition files (`pr
 | `GET`  | `/users/:id` | Yes       | Get a single user by ID               |
 | `PUT`  | `/users/:id` | Yes       | Update user info by admin             |
 
-### Pagination (GET /users)
+### Company (`/company`)
 
-The `findAll` service supports query parameters:
+| Method | URL              | Protected | Description                      |
+| ------ | ---------------- | --------- | -------------------------------- |
+| `GET`  | `/company`       | No        | Get company information          |
+| `POST` | `/company/setup` | No        | Initial company setup (one-time) |
+
+### Products (`/products`)
+
+| Method   | URL                                        | Protected | Description                     |
+| -------- | ------------------------------------------ | --------- | ------------------------------- |
+| `GET`    | `/products`                                | Yes       | List all products (with filters & pagination) |
+| `GET`    | `/products/:id`                            | Yes       | Get product by ID (with variants & images)    |
+| `POST`   | `/products`                                | Yes       | Create a new product            |
+| `PUT`    | `/products/:id`                            | Yes       | Update product by ID            |
+| `DELETE` | `/products/:id`                            | Yes       | Delete product by ID            |
+
+### Product Variants (`/products/:productId/variants`)
+
+| Method   | URL                                             | Protected | Description              |
+| -------- | ----------------------------------------------- | --------- | ------------------------ |
+| `GET`    | `/products/:productId/variants`                 | Yes       | Get all variants         |
+| `POST`   | `/products/:productId/variants`                 | Yes       | Create a variant         |
+| `PUT`    | `/products/:productId/variants/:variantId`      | Yes       | Update a variant         |
+| `DELETE` | `/products/:productId/variants/:variantId`      | Yes       | Delete a variant         |
+
+### Product Images (`/products/:productId/images`)
+
+| Method   | URL                                           | Protected | Description            |
+| -------- | --------------------------------------------- | --------- | ---------------------- |
+| `GET`    | `/products/:productId/images`                 | Yes       | Get all images         |
+| `POST`   | `/products/:productId/images`                 | Yes       | Add an image           |
+| `PUT`    | `/products/:productId/images/:imageId`        | Yes       | Update an image        |
+| `DELETE` | `/products/:productId/images/:imageId`        | Yes       | Delete an image        |
+
+### Pagination & Filtering
+
+**GET /users** supports:
 
 | Parameter | Default     | Description      |
 | --------- | ----------- | ---------------- |
 | `page`    | `1`         | Page number      |
 | `limit`   | `10`        | Records per page |
 | `sort`    | `createdAt` | Sort field       |
+
+**GET /products** supports:
+
+| Parameter    | Default     | Description              |
+| ------------ | ----------- | ------------------------ |
+| `page`       | `1`         | Page number              |
+| `limit`      | `10`        | Records per page         |
+| `sort`       | `createdAt` | Sort field               |
+| `categoryId` | -           | Filter by category       |
+| `brandId`    | -           | Filter by brand          |
+| `isActive`   | -           | Filter by active status  |
+| `isFeatured` | -           | Filter by featured       |
+| `search`     | -           | Search by name or SKU    |
 
 ### Swagger UI
 
@@ -245,154 +390,294 @@ bun run start
 
 # Bun + Express REST API
 
-TypeScript ile yazılmış, **Bun** runtime üzerinde çalışan, **Express**, **Prisma ORM**, **PostgreSQL** ve **Keycloak** kullanan REST API boilerplate'i.
+TypeScript ile yazilmis, **Bun** runtime uzerinde calisan, **Express**, **Prisma ORM**, **PostgreSQL** ve **Keycloak** kullanan e-ticaret REST API boilerplate'i.
 
 ---
 
-## 🚀 Teknoloji Yığını
+## 🚀 Teknoloji Yigini
 
-| Teknoloji                                          | Açıklama                                               |
+| Teknoloji                                          | Aciklama                                               |
 | -------------------------------------------------- | ------------------------------------------------------ |
-| [Bun](https://bun.sh)                              | Hızlı JavaScript/TypeScript runtime & paket yöneticisi |
-| [Express v5](https://expressjs.com)                | HTTP sunucu framework'ü                                |
-| [Prisma ORM](https://www.prisma.io)                | PostgreSQL için tip-güvenli veritabanı istemcisi       |
-| [Keycloak](https://www.keycloak.org)               | Açık kaynak kimlik doğrulama yönetim sistemi           |
+| [Bun](https://bun.sh)                              | Hizli JavaScript/TypeScript runtime & paket yoneticisi |
+| [Express v5](https://expressjs.com)                | HTTP sunucu framework'u                                |
+| [Prisma ORM](https://www.prisma.io)                | PostgreSQL icin tip-guvenli veritabani istemcisi       |
+| [Keycloak](https://www.keycloak.org)               | Acik kaynak kimlik dogrulama yonetim sistemi           |
 | [TypeScript](https://www.typescriptlang.org)       | Statik tip denetimi                                    |
-| [Zod](https://zod.dev)                             | Nesne tabanlı dinamik veri doğrulama                   |
-| [Swagger UI](https://swagger.io/tools/swagger-ui/) | Otomatik API dokümantasyonu (`/api-docs`)              |
-| [Helmet](https://helmetjs.github.io)               | HTTP güvenlik başlıkları                               |
-| [CORS](https://github.com/expressjs/cors)          | Cross-Origin Resource Sharing desteği                  |
+| [Zod](https://zod.dev)                             | Nesne tabanli dinamik veri dogrulama                   |
+| [Swagger UI](https://swagger.io/tools/swagger-ui/) | Otomatik API dokumantasyonu (`/api-docs`)              |
+| [Helmet](https://helmetjs.github.io)               | HTTP guvenlik basliklari                               |
+| [CORS](https://github.com/expressjs/cors)          | Cross-Origin Resource Sharing destegi                  |
 | [Morgan](https://github.com/expressjs/morgan)      | HTTP istek loglama                                     |
 
 ---
 
-## 📁 Proje Yapısı
+## 📁 Proje Yapisi
 
 ```
 bun-backend/
 ├── src/
-│   ├── server.ts              # Uygulama giriş noktası, Express kurulumu
+│   ├── server.ts                # Uygulama giris noktasi, Express kurulumu
 │   ├── config/
-│   │   ├── index.ts           # Config barrel export
-│   │   └── swagger.ts         # Swagger / OpenAPI 3.0 ayarları
+│   │   ├── index.ts             # Config barrel export
+│   │   ├── morgan-logger.ts     # Morgan HTTP logger yapilandirmasi
+│   │   ├── nodemailler.ts       # Nodemailer e-posta yapilandirmasi
+│   │   └── swagger.ts           # Swagger / OpenAPI 3.0 ayarlari
 │   ├── modules/
-│   │   ├── auth/              # Kimlik doğrulama (Keycloak entegre iş mantığı)
-│   │   └── user/              # Kullanıcı yönetimi sistemi
+│   │   ├── auth/                # Kimlik dogrulama modulu
+│   │   │   ├── auth.controller.ts
+│   │   │   ├── auth.service.ts
+│   │   │   └── keycloak.service.ts
+│   │   ├── user/                # Kullanici yonetimi modulu
+│   │   │   ├── user.controller.ts
+│   │   │   └── user.service.ts
+│   │   ├── company/             # Sirket bilgileri modulu
+│   │   │   ├── company.controller.ts
+│   │   │   └── company.service.ts
+│   │   └── product/             # Urun yonetimi modulu
+│   │       ├── product.controller.ts
+│   │       └── product.service.ts
 │   ├── routes/
-│   │   ├── index.ts           # Route barrel export
-│   │   ├── auth.routes.ts     # /auth endpoint tanımları
-│   │   └── user.routes.ts     # /users endpoint tanımları
-│   ├── schemas/               # Zod validasyon şemaları
+│   │   ├── index.ts             # Route barrel export
+│   │   ├── auth.routes.ts       # /auth endpoint tanimlari
+│   │   ├── user.routes.ts       # /users endpoint tanimlari
+│   │   ├── company.routes.ts    # /company endpoint tanimlari
+│   │   └── product.routes.ts    # /products endpoint tanimlari
+│   ├── schemas/                 # Zod validasyon semalari
+│   │   ├── index.ts
+│   │   ├── user.validator.ts
+│   │   └── product.validator.ts
 │   ├── middlewares/
-│   │   ├── index.ts           # Middleware barrel export
-│   │   ├── async-handler.middleware.ts  # Async hata sarmalayıcı
-│   │   ├── error.middleware.ts          # Merkezi hata yönetimi
-│   │   ├── auth.middleware.ts           # Keycloak doğrulama guard'ı
-│   │   └── not-found.middleware.ts      # 404 yakalayıcı
+│   │   ├── index.ts             # Middleware barrel export
+│   │   ├── async-handler.middleware.ts  # Async hata sarmalayici
+│   │   ├── error.middleware.ts          # Merkezi hata yonetimi
+│   │   ├── auth.middleware.ts           # Keycloak dogrulama guard'i
+│   │   └── not-found.middleware.ts      # 404 yakalayici
+│   ├── utils/
+│   │   ├── index.ts             # Utils barrel export
+│   │   ├── auth.ts              # Kimlik dogrulama yardimcilari
+│   │   └── logger.ts            # Uygulama logger'i
+│   ├── types/
+│   │   └── express.d.ts         # Express tip genisletmesi
 │   └── lib/
-│       ├── index.ts           # Lib barrel export
-│       └── prisma.ts          # Prisma Client singleton
+│       ├── index.ts             # Lib barrel export
+│       └── prisma.ts            # Prisma Client singleton
 ├── prisma/
-│   ├── schema.prisma          # Birleştirilmiş prisma modeli (otomatik oluşturulan)
-│   ├── models/                # Modülerleştirilmiş veritabanı şemaları (user, address vs.)
-│   └── migrations/            # Veritabanı göç geçmişi
+│   ├── schema.prisma            # Birlestirilmis prisma modeli (otomatik olusturulan)
+│   ├── models/                  # Modulerlestirilmis veritabani semalari (14 dosya)
+│   │   ├── user.prisma          # Kullanici modeli
+│   │   ├── address.prisma       # Adres modeli
+│   │   ├── company.prisma       # Sirket modeli
+│   │   ├── product.prisma       # Urun modeli
+│   │   ├── product-variant.prisma # Urun varyant modeli
+│   │   ├── product-image.prisma # Urun gorsel modeli
+│   │   ├── category.prisma      # Kategori modeli
+│   │   ├── brand.prisma         # Marka modeli
+│   │   ├── cart.prisma          # Sepet modeli
+│   │   ├── order.prisma         # Siparis modeli
+│   │   ├── payment.prisma       # Odeme modeli
+│   │   ├── coupon.prisma        # Kupon modeli
+│   │   ├── review.prisma        # Degerlendirme modeli
+│   │   └── wishlist.prisma      # Istek listesi modeli
+│   └── migrations/              # Veritabani goc gecmisi
 ├── generated/
-│   └── prisma/                # Otomatik üretilmiş prisma client
+│   └── prisma/                  # Otomatik uretilmis prisma client
 ├── scripts/
-│   └── merge-prisma.ts        # Prisma şema birleştirme (merge) scripti
-├── prisma.config.ts           # Prisma CLI yapılandırması
-├── tsconfig.json              # TypeScript yapılandırması
+│   └── merge-prisma.ts          # Prisma sema birlestirme (merge) scripti
+├── public/                      # Statik dosyalar
+├── prisma.config.ts             # Prisma CLI yapilandirmasi
+├── tsconfig.json                # TypeScript yapilandirmasi
 ├── package.json
-└── .env                       # Çevresel değişkenler (git'e eklenmez)
+└── .env                         # Cevresel degiskenler (git'e eklenmez)
 ```
 
 ---
 
-## 🗃️ Veritabanı Şeması
+## 🗃️ Veritabani Semasi
 
-Projedeki Prisma modelleri ayrı dosyalarda barınmakta (`prisma/models/*`) ve betik ile tek bir dosyaya (schema.prisma) çevrilmektedir.
+Projedeki Prisma modelleri ayri dosyalarda barinmakta (`prisma/models/*`) ve betik ile tek bir dosyaya (schema.prisma) cevrilmektedir. Proje **14 model** icerir ve tam bir e-ticaret alanini kapsar.
 
 ### User Modeli
 
-| Alan              | Tip         | Açıklama                                        |
+| Alan              | Tip         | Aciklama                                        |
 | ----------------- | ----------- | ----------------------------------------------- |
 | `id`              | `String`    | UUID Birincil anahtar                           |
-| `keycloakId`      | `String`    | Keycloak id'si ile benzersiz eşleşme            |
+| `keycloakId`      | `String`    | Keycloak id'si ile benzersiz eslestirme         |
 | `email`           | `String`    | Benzersiz E-posta adresi                        |
-| `firstName`       | `String`    | Kullanıcı adı                                   |
-| `lastName`        | `String`    | Kullanıcı soyadı                                |
-| `phone`           | `String?`   | Telefon numarası                                |
-| `isEmailVerified` | `Boolean`   | Hesabın doğrulanıp doğrulanmadığı               |
-| `activationToken` | `String?`   | Hesabı aktifleştirme sırasında kullanılan token |
-| `addresses`       | `Address[]` | Kullanıcının adresleri (ilişkisel tablo)        |
+| `firstName`       | `String`    | Kullanici adi                                   |
+| `lastName`        | `String`    | Kullanici soyadi                                |
+| `phone`           | `String?`   | Telefon numarasi                                |
+| `isEmailVerified` | `Boolean`   | Hesabin dogrulanip dogrulanmadigi               |
+| `activationToken` | `String?`   | Hesabi aktiflestirme sirasinda kullanilan token  |
+| `addresses`       | `Address[]` | Kullanicinin adresleri (iliskisel tablo)        |
 
 ### Address Modeli
 
-| Alan          | Tip           | Açıklama                                            |
+| Alan          | Tip           | Aciklama                                            |
 | ------------- | ------------- | --------------------------------------------------- |
 | `id`          | `String`      | UUID Birincil anahtar                               |
 | `userId`      | `String`      | User modeline referans                              |
-| `title`       | `String`      | Adres başlığı (Örn: Ev, İş)                         |
-| `fullName`    | `String`      | Teslim alacak kişinin tam adı                       |
-| `phone`       | `String`      | Adres iletişim numarası                             |
-| `country`     | `String`      | Ülke                                                |
-| `city`        | `String`      | Şehir                                               |
-| `district`    | `String`      | İlçe                                                |
+| `title`       | `String`      | Adres basligi (Orn: Ev, Is)                         |
+| `fullName`    | `String`      | Teslim alacak kisinin tam adi                       |
+| `phone`       | `String`      | Adres iletisim numarasi                             |
+| `country`     | `String`      | Ulke                                                |
+| `city`        | `String`      | Sehir                                               |
+| `district`    | `String`      | Ilce                                                |
 | `postalCode`  | `String`      | Posta kodu                                          |
-| `addressLine` | `String`      | Tam açık adres                                      |
+| `addressLine` | `String`      | Tam acik adres                                      |
 | `isBilling`   | `Boolean`     | Fatura adresi mi? (`true`/`false`)                  |
 | `billingType` | `BillingType` | Kurumsal (`CORPORATE`) veya Bireysel (`INDIVIDUAL`) |
-| `companyName` | `String?`     | Şirket adı (eğer kurumsal ise)                      |
-| `taxNumber`   | `String?`     | Vergi No (eğer kurumsal ise)                        |
-| `taxOffice`   | `String?`     | Vergi dairesi (eğer kurumsal ise)                   |
+| `companyName` | `String?`     | Sirket adi (eger kurumsal ise)                      |
+| `taxNumber`   | `String?`     | Vergi No (eger kurumsal ise)                        |
+| `taxOffice`   | `String?`     | Vergi dairesi (eger kurumsal ise)                   |
+
+### Company Modeli
+
+| Alan    | Tip      | Aciklama                                                                |
+| ------- | -------- | ----------------------------------------------------------------------- |
+| `id`    | `String` | UUID Birincil anahtar                                                   |
+| `name`  | `String` | Sirket adi                                                              |
+| `title` | `String` | Sirket unvani                                                           |
+| ...     | ...      | Tam sirket bilgileri: aciklama, URL'ler, vergi bilgisi, sosyal medya    |
+
+### Product Modeli
+
+| Alan               | Tip        | Aciklama                        |
+| ------------------ | ---------- | ------------------------------- |
+| `id`               | `String`   | UUID Birincil anahtar           |
+| `name`             | `String`   | Urun adi (benzersiz)            |
+| `slug`             | `String`   | URL-uyumlu slug (benzersiz)     |
+| `sku`              | `String`   | Stok Birim Kodu (benzersiz)     |
+| `barcode`          | `String?`  | Barkod (benzersiz)              |
+| `basePrice`        | `Decimal`  | Taban fiyat                     |
+| `salePrice`        | `Decimal?` | Indirimli fiyat                 |
+| `currency`         | `String`   | Para birimi (varsayilan: TRY)   |
+| `taxRate`          | `Decimal`  | Vergi orani yuzdesi             |
+| `stock`            | `Int`      | Stok miktari                    |
+| `lowStockThreshold`| `Int`      | Dusuk stok uyari esigi          |
+| `trackStock`       | `Boolean`  | Stok takibi yapilsin mi         |
+| `isActive`         | `Boolean`  | Aktiflik durumu                 |
+| `isFeatured`       | `Boolean`  | One cikan urun flagi            |
+| `metaTitle`        | `String?`  | SEO basligi                     |
+| `metaDescription`  | `String?`  | SEO aciklamasi                  |
+| `categoryId`       | `String?`  | Kategori iliskisi               |
+| `brandId`          | `String?`  | Marka iliskisi                  |
+
+### Diger Modeller
+
+| Model            | Aciklama                                                                |
+| ---------------- | ----------------------------------------------------------------------- |
+| `ProductVariant` | Urun secenekleri (renk, beden vb.) - SKU, fiyat, stok, JSON attributes |
+| `ProductImage`   | Urun gorselleri - URL, alt text, siralama, birincil gorsel flagi       |
+| `Category`       | Hiyerarsik urun kategorileri (kendine referansli parentId)             |
+| `Brand`          | Urun markalari - ad, slug, logo                                        |
+| `Cart`           | Kullanici basina alisveris sepeti (1:1 iliski)                         |
+| `CartItem`       | Sepet icerigi - urun, varyant, adet                                    |
+| `Order`          | Muesteri siparisleri - durum, fiyatlandirma, teslimat/fatura adresleri |
+| `OrderItem`      | Siparis kalemleri - siparis anindaki urun verisinin kopyasi            |
+| `Payment`        | Siparis odemeleri (kredi karti, banka transferi, kapida odeme)         |
+| `Coupon`         | Indirim kuponlari (yuzdelik veya sabit tutar)                          |
+| `Review`         | Urun degerlendirmeleri - puan, baslik, yorum                           |
+| `WishlistItem`   | Kullanicinin favori urunleri                                           |
+
+**Enum'lar:** `BillingType`, `OrderStatus`, `PaymentMethod`, `PaymentStatus`, `DiscountType`
 
 ---
 
 ## 🔌 API Endpoint'leri
 
-### Kimlik Doğrulama (`/auth`)
+### Kimlik Dogrulama (`/auth`)
 
-| Method | URL                  | Koruma | Açıklama                                                                   |
-| ------ | -------------------- | ------ | -------------------------------------------------------------------------- |
-| `POST` | `/auth/register`     | Yok    | Yeni kullanıcı oluşturur (Keycloak'ta da oluşturur ve onay maili atar).    |
-| `POST` | `/auth/login`        | Yok    | Keycloak üzerinden login ile access ve refresh token döndürür.             |
-| `POST` | `/auth/logout`       | Yok    | Keycloak'taki oturumu/refresh token'ı sonlandırır.                         |
-| `GET`  | `/auth/verify-email` | Yok    | Kullanıcının hesabını doğrulamasını sağlar (link url üzerinden token ile). |
-| `POST` | `/auth/verify-email` | Yok    | Kullanıcının hesabını doğrulamasını sağlar (request body'den token ile).   |
-| `PUT`  | `/auth/update`       | Var    | Login olan kullanıcının profil bilgilerini (isim, telefon vb) günceller.   |
-| `PUT`  | `/auth/password`     | Var    | Login olan kullanıcının parolasını Keycloak üzerinden günceller.           |
+| Method | URL                  | Koruma | Aciklama                                                                  |
+| ------ | -------------------- | ------ | ------------------------------------------------------------------------- |
+| `POST` | `/auth/register`     | Yok    | Yeni kullanici olusturur (Keycloak'ta da olusturur ve onay maili atar)    |
+| `POST` | `/auth/login`        | Yok    | Keycloak uzerinden login ile access ve refresh token dondurur             |
+| `POST` | `/auth/logout`       | Yok    | Keycloak'taki oturumu/refresh token'i sonlandirir                         |
+| `GET`  | `/auth/verify-email` | Yok    | Kullanicinin hesabini dogrulamasini saglar (link url uzerinden token ile) |
+| `POST` | `/auth/verify-email` | Yok    | Kullanicinin hesabini dogrulamasini saglar (request body'den token ile)   |
+| `PUT`  | `/auth/update`       | Var    | Login olan kullanicinin profil bilgilerini gunceller                      |
+| `PUT`  | `/auth/password`     | Var    | Login olan kullanicinin parolasini Keycloak uzerinden gunceller           |
 
-### Kullanıcılar (`/users`)
+### Kullanicilar (`/users`)
 
-| Method | URL          | Koruma | Açıklama                                        |
+| Method | URL          | Koruma | Aciklama                                        |
 | ------ | ------------ | ------ | ----------------------------------------------- |
-| `GET`  | `/users`     | Var    | Tüm kullanıcıları listeler (sayfalama destekli) |
-| `GET`  | `/users/:id` | Var    | ID'ye göre tek kullanıcı getirir                |
-| `PUT`  | `/users/:id` | Var    | Kullanıcıyı admin/yetkili günceller             |
+| `GET`  | `/users`     | Var    | Tum kullanicilari listeler (sayfalama destekli) |
+| `GET`  | `/users/:id` | Var    | ID'ye gore tek kullanici getirir                |
+| `PUT`  | `/users/:id` | Var    | Kullaniciyi admin/yetkili gunceller             |
+
+### Sirket (`/company`)
+
+| Method | URL              | Koruma | Aciklama                             |
+| ------ | ---------------- | ------ | ------------------------------------ |
+| `GET`  | `/company`       | Yok    | Sirket bilgilerini getirir           |
+| `POST` | `/company/setup` | Yok    | Ilk sirket kurulumu (tek seferlik)   |
+
+### Urunler (`/products`)
+
+| Method   | URL               | Koruma | Aciklama                                       |
+| -------- | ----------------- | ------ | ---------------------------------------------- |
+| `GET`    | `/products`       | Var    | Tum urunleri listeler (filtreleme & sayfalama) |
+| `GET`    | `/products/:id`   | Var    | ID'ye gore urun getirir (varyant & gorsel ile) |
+| `POST`   | `/products`       | Var    | Yeni urun olusturur                            |
+| `PUT`    | `/products/:id`   | Var    | Urunu gunceller                                |
+| `DELETE` | `/products/:id`   | Var    | Urunu siler                                    |
+
+### Urun Varyantlari (`/products/:productId/variants`)
+
+| Method   | URL                                             | Koruma | Aciklama            |
+| -------- | ----------------------------------------------- | ------ | ------------------- |
+| `GET`    | `/products/:productId/variants`                 | Var    | Tum varyantlar      |
+| `POST`   | `/products/:productId/variants`                 | Var    | Varyant olustur     |
+| `PUT`    | `/products/:productId/variants/:variantId`      | Var    | Varyant guncelle    |
+| `DELETE` | `/products/:productId/variants/:variantId`      | Var    | Varyant sil         |
+
+### Urun Gorselleri (`/products/:productId/images`)
+
+| Method   | URL                                           | Koruma | Aciklama          |
+| -------- | --------------------------------------------- | ------ | ----------------- |
+| `GET`    | `/products/:productId/images`                 | Var    | Tum gorseller     |
+| `POST`   | `/products/:productId/images`                 | Var    | Gorsel ekle       |
+| `PUT`    | `/products/:productId/images/:imageId`        | Var    | Gorsel guncelle   |
+| `DELETE` | `/products/:productId/images/:imageId`        | Var    | Gorsel sil        |
+
+### Sayfalama ve Filtreleme
+
+**GET /products** desteklenen parametreler:
+
+| Parametre    | Varsayilan  | Aciklama                 |
+| ------------ | ----------- | ------------------------ |
+| `page`       | `1`         | Sayfa numarasi           |
+| `limit`      | `10`        | Sayfa basina kayit       |
+| `sort`       | `createdAt` | Siralama alani           |
+| `categoryId` | -           | Kategoriye gore filtrele |
+| `brandId`    | -           | Markaya gore filtrele    |
+| `isActive`   | -           | Aktiflik durumuna gore   |
+| `isFeatured` | -           | One cikan urune gore     |
+| `search`     | -           | Ad veya SKU ile arama    |
 
 ---
 
-## ⚙️ Kurulum ve Çalıştırma
+## ⚙️ Kurulum ve Calistirma
 
 ### Gereksinimler
 
-- [Bun](https://bun.sh) v1.3.1 veya üstü
+- [Bun](https://bun.sh) v1.3.1 veya ustu
 - PostgreSQL
 - Keycloak Sunucusu
 
-### Başlatma Adımları
+### Baslatma Adimlari
 
 ```bash
 bun install
 
-# Daha sonra .env dosyanızı uygun paramaterler (Aşağıya/İngilizce kısma bakınız) ekleyerek doldurun.
+# Daha sonra .env dosyanizi uygun paramaterler (Yukariya/Ingilizce kisma bakiniz) ekleyerek doldurun.
 
 bun run prisma:generate
 
 bunx --bun prisma migrate dev
 
-# Geliştirme ortamında çalışmak için
+# Gelistirme ortaminda calismak icin
 bun run dev
 ```
 
-API belgeleri için `http://localhost:3000/api-docs` sayfasına göz atabilirsiniz.
+API belgeleri icin `http://localhost:3000/api-docs` sayfasina goz atabilirsiniz.
